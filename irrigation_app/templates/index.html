@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI-powered irrigation recommendation system — enter your field conditions and get an instant, science-backed irrigation decision." />
+  <title>🌱 AI Irrigation Optimizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <!-- ░░ HERO HEADER ░░ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-mark">🌱</div>
+      <div>
+        <h1 class="site-title">AI Irrigation Optimizer</h1>
+        <p class="site-tagline">Right Water · Right Time · Right Crop</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ░░ MODEL ERROR BANNER ░░ -->
+    {% if not model_loaded %}
+    <div class="alert alert-danger" role="alert">
+      <strong>⚠ Model Not Loaded</strong>
+      <pre>{{ model_error }}</pre>
+    </div>
+    {% endif %}
+
+    <!-- ░░ VALIDATION ERRORS ░░ -->
+    {% if errors %}
+    <div class="alert alert-danger" role="alert">
+      <strong>Please fix the following errors:</strong>
+      <ul>
+        {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- ░░ RESULT CARD ░░ -->
+    {% if result %}
+    {% set lvl = result.need_level %}
+    {% set tier_class = 'tier-no' if result.irrigation_required == 'NO' else ('tier-moderate' if lvl == 'MODERATE' else 'tier-high') %}
+    {% set tier_icon  = '✅' if result.irrigation_required == 'NO' else ('⚠️' if lvl == 'MODERATE' else '🔴') %}
+    <section class="result-card {{ tier_class }}" aria-label="Irrigation Recommendation Result">
+      <div class="result-header">
+        <span class="result-badge">{{ tier_icon }} Irrigation {{ result.irrigation_required }}</span>
+        <span class="result-level">Need Level: <strong>{{ lvl }}</strong></span>
+      </div>
+      <p class="result-reason">{{ result.reason }}</p>
+      <div class="result-grid">
+        <div class="result-stat">
+          <span class="stat-value">{{ result.recommended_water_liters }}</span>
+          <span class="stat-label">Litres Required</span>
+        </div>
+        <div class="result-stat">
+          <span class="stat-value">{{ result.recommended_time_minutes }}</span>
+          <span class="stat-label">Minutes to Run</span>
+        </div>
+        <div class="result-stat">
+          <span class="stat-value">{{ result.raw_model_prediction_mm }} mm</span>
+          <span class="stat-label">Model Prediction</span>
+        </div>
+        <div class="result-stat">
+          <span class="stat-value">{{ result.confidence_pct }}%</span>
+          <span class="stat-label">Confidence</span>
+        </div>
+      </div>
+      {% if result.et0_mm_used is defined %}
+      <p class="result-meta">ET₀ auto-calculated: <code>{{ result.et0_mm_used }} mm/day</code></p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- ░░ FORM ░░ -->
+    <form id="irrigation-form" method="post" action="/predict" novalidate>
+      <div class="form-grid">
+
+        <!-- ── WEATHER ── -->
+        <fieldset class="card">
+          <legend class="card-legend">🌤 Weather Conditions</legend>
+
+          <div class="field-group">
+            <label for="temperature_c">Temperature (°C)</label>
+            <input id="temperature_c" type="number" name="temperature_c" step="0.1"
+              placeholder="e.g. 35" required min="-50" max="60"
+              value="{{ form_data.temperature_c if form_data else '' }}" />
+            <span class="hint">Ambient air temperature</span>
+          </div>
+
+          <div class="field-group">
+            <label for="humidity_pct">Relative Humidity (%)</label>
+            <input id="humidity_pct" type="number" name="humidity_pct" step="0.1"
+              placeholder="e.g. 55" required min="0" max="100"
+              value="{{ form_data.humidity_pct if form_data else '' }}" />
+            <span class="hint">0–100%</span>
+          </div>
+
+          <div class="field-group">
+            <label for="wind_speed_kmph">Wind Speed (km/h)</label>
+            <input id="wind_speed_kmph" type="number" name="wind_speed_kmph" step="0.1"
+              placeholder="e.g. 12" required min="0"
+              value="{{ form_data.wind_speed_kmph if form_data else '' }}" />
+            <span class="hint">Average daily wind speed</span>
+          </div>
+
+          <div class="field-group">
+            <label for="rainfall_forecast_mm">Rainfall Forecast (mm)</label>
+            <input id="rainfall_forecast_mm" type="number" name="rainfall_forecast_mm" step="0.1"
+              placeholder="e.g. 0" required min="0"
+              value="{{ form_data.rainfall_forecast_mm if form_data else '' }}" />
+            <span class="hint">Expected rainfall today</span>
+          </div>
+        </fieldset>
+
+        <!-- ── SOIL ── -->
+        <fieldset class="card">
+          <legend class="card-legend">🌍 Soil Conditions</legend>
+
+          <div class="field-group">
+            <label for="soil_moisture_pct">Soil Moisture (%)</label>
+            <input id="soil_moisture_pct" type="number" name="soil_moisture_pct" step="0.1"
+              placeholder="e.g. 22" required min="0" max="100"
+              value="{{ form_data.soil_moisture_pct if form_data else '' }}" />
+            <span class="hint">Current volumetric soil moisture</span>
+          </div>
+
+          <div class="field-group">
+            <label for="field_capacity_pct">Field Capacity (%)</label>
+            <input id="field_capacity_pct" type="number" name="field_capacity_pct" step="0.1"
+              placeholder="e.g. 33" required min="0" max="100"
+              value="{{ form_data.field_capacity_pct if form_data else '' }}" />
+            <span class="hint">Maximum water the soil can hold</span>
+          </div>
+
+          <div class="field-group">
+            <label for="soil_type">Soil Type</label>
+            <select id="soil_type" name="soil_type" required>
+              <option value="" disabled {% if not form_data or not form_data.soil_type %}selected{% endif %}>Select soil type…</option>
+              {% for s in soils %}
+              <option value="{{ s }}" {% if form_data and form_data.soil_type == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </fieldset>
+
+        <!-- ── CROP ── -->
+        <fieldset class="card">
+          <legend class="card-legend">🌾 Crop Information</legend>
+
+          <div class="field-group">
+            <label for="crop_type">Crop Type</label>
+            <select id="crop_type" name="crop_type" required>
+              <option value="" disabled {% if not form_data or not form_data.crop_type %}selected{% endif %}>Select crop…</option>
+              {% for c in crops %}
+              <option value="{{ c }}" {% if form_data and form_data.crop_type == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="growth_stage">Growth Stage</label>
+            <select id="growth_stage" name="growth_stage" required>
+              <option value="" disabled {% if not form_data or not form_data.growth_stage %}selected{% endif %}>Select stage…</option>
+              {% for st in stages %}
+              <option value="{{ st }}" {% if form_data and form_data.growth_stage == st %}selected{% endif %}>{{ st }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </fieldset>
+
+        <!-- ── FIELD SETUP ── -->
+        <fieldset class="card">
+          <legend class="card-legend">🏗 Field Setup</legend>
+
+          <div class="field-group">
+            <label for="field_area_m2">Field Area (m²)</label>
+            <input id="field_area_m2" type="number" name="field_area_m2" step="1"
+              placeholder="e.g. 1000" required min="1"
+              value="{{ form_data.field_area_m2 if form_data else '1000' }}" />
+            <span class="hint">Total irrigated area in square metres</span>
+          </div>
+
+          <div class="field-group">
+            <label for="flow_rate_lpm">Pump Flow Rate (L/min)</label>
+            <input id="flow_rate_lpm" type="number" name="flow_rate_lpm" step="1"
+              placeholder="e.g. 200" required min="1"
+              value="{{ form_data.flow_rate_lpm if form_data else '200' }}" />
+            <span class="hint">Irrigation pump output</span>
+          </div>
+
+          <div class="info-box">
+            <p>💡 <strong>ET₀</strong> (reference evapotranspiration) is automatically estimated from temperature and humidity — no need to enter it manually.</p>
+          </div>
+        </fieldset>
+
+      </div><!-- /.form-grid -->
+
+      <div class="submit-row">
+        <button id="submit-btn" type="submit" {% if not model_loaded %}disabled{% endif %}>
+          <span class="btn-icon">🔍</span> Get Irrigation Recommendation
+        </button>
+      </div>
+    </form>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>AI Irrigation Optimizer · Built for Smart Farming · Powered by scikit-learn</p>
+  </footer>
+
+  <script>
+    // Live client-side validation feedback
+    const form = document.getElementById('irrigation-form');
+    form.addEventListener('submit', (e) => {
+      let ok = true;
+      form.querySelectorAll('input[required], select[required]').forEach(el => {
+        if (!el.value.trim()) { el.classList.add('invalid'); ok = false; }
+        else el.classList.remove('invalid');
+      });
+      if (!ok) {
+        e.preventDefault();
+        form.querySelector('.invalid')?.focus();
+      }
+    });
+    form.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', () => el.classList.remove('invalid'));
+    });
+  </script>
+</body>
+</html>
