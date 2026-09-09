@@ -26,9 +26,32 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing   import OneHotEncoder, StandardScaler
 from sklearn.compose         import ColumnTransformer
 from sklearn.pipeline        import Pipeline
-from sklearn.linear_model    import LinearRegression
-from sklearn.ensemble        import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model    import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.svm             import SVR
+from sklearn.neighbors       import KNeighborsRegressor
+from sklearn.tree            import DecisionTreeRegressor
+from sklearn.ensemble        import (
+    RandomForestRegressor,
+    GradientBoostingRegressor,
+    ExtraTreesRegressor,
+    AdaBoostRegressor,
+    HistGradientBoostingRegressor,
+    BaggingRegressor,
+)
 from sklearn.metrics         import mean_absolute_error, mean_squared_error, r2_score
+
+# Optional: XGBoost and LightGBM (gracefully skipped if not installed)
+try:
+    from xgboost import XGBRegressor
+    HAS_XGB = True
+except ImportError:
+    HAS_XGB = False
+
+try:
+    from lightgbm import LGBMRegressor
+    HAS_LGBM = True
+except ImportError:
+    HAS_LGBM = False
 
 warnings.filterwarnings("ignore")
 np.random.seed(42)
@@ -218,13 +241,39 @@ preprocessor = ColumnTransformer([
     ('cat', OneHotEncoder(handle_unknown='ignore'), feature_cols_cat),
 ])
 
-# ── Train & select best model ─────────────────────────────────────────────────
+# ── Train & select best model ──────────────────────────────────────────────────
+# 15 models compete; the best RMSE on the held-out test set is saved.
 models = {
-    'Linear Regression':   LinearRegression(),
-    'Random Forest':       RandomForestRegressor(n_estimators=200, random_state=42),
-    'Gradient Boosting':   GradientBoostingRegressor(random_state=42),
+    # --- Linear ---
+    'Linear Regression':         LinearRegression(),
+    'Ridge Regression':          Ridge(alpha=1.0),
+    'Lasso Regression':          Lasso(alpha=0.01, max_iter=5000),
+    'ElasticNet':                ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=5000),
+    # --- Neighbors ---
+    'KNN (k=7)':                 KNeighborsRegressor(n_neighbors=7, n_jobs=-1),
+    # --- SVM ---
+    'SVR (RBF)':                 SVR(kernel='rbf', C=10.0),
+    # --- Single tree ---
+    'Decision Tree':             DecisionTreeRegressor(max_depth=12, random_state=42),
+    # --- Ensemble bagging ---
+    'Bagging':                   BaggingRegressor(n_estimators=100, random_state=42, n_jobs=-1),
+    'Random Forest':             RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1),
+    'Extra Trees':               ExtraTreesRegressor(n_estimators=200, random_state=42, n_jobs=-1),
+    # --- Ensemble boosting ---
+    'AdaBoost':                  AdaBoostRegressor(n_estimators=100, random_state=42),
+    'Gradient Boosting':         GradientBoostingRegressor(n_estimators=200, random_state=42),
+    'Hist Gradient Boosting':    HistGradientBoostingRegressor(max_iter=200, random_state=42),
 }
 
+# Add XGBoost and LightGBM if available
+if HAS_XGB:
+    models['XGBoost'] = XGBRegressor(n_estimators=200, learning_rate=0.1, max_depth=6,
+                                     random_state=42, verbosity=0, n_jobs=-1)
+if HAS_LGBM:
+    models['LightGBM'] = LGBMRegressor(n_estimators=200, learning_rate=0.1, max_depth=6,
+                                       random_state=42, verbose=-1, n_jobs=-1)
+
+print(f"Training {len(models)} models ...")
 results, pipelines = {}, {}
 for name, model in models.items():
     pipe = Pipeline([('preprocessor', preprocessor), ('model', model)])
