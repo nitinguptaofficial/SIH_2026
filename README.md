@@ -89,7 +89,7 @@ Render is the recommended deployment target for this Flask application.
    - Build command: `pip install -r requirements.txt`
    - Start command: `gunicorn --chdir src app:app`
    - Health check: `/`
-5. Select **Apply**. When deployment finishes, open the generated `.onrender.com` URL.
+5. Select **Apply**. The deployed application is available at <https://sih-2026-ewxl.onrender.com/>.
 
 ### Option B: Manual web service
 
@@ -109,7 +109,7 @@ No environment variables are required for the current application.
 The `POST /predict` endpoint returns JSON when the request includes `Accept: application/json`.
 
 ```bash
-curl -X POST https://<your-render-service>.onrender.com/predict \
+curl -X POST https://sih-2026-ewxl.onrender.com/predict \
   -H "Accept: application/json" \
   -d "temperature_c=42&humidity_pct=30&wind_speed_kmph=4&rainfall_forecast_mm=0&soil_moisture_pct=20&field_capacity_pct=33&crop_type=Rice&soil_type=Loamy&growth_stage=Mid-season&field_area_m2=2000&flow_rate_lpm=200"
 ```
