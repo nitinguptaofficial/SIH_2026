@@ -1,7 +1,7 @@
 # AI Irrigation Optimizer — Web App Build Instructions
 
 ## Context
-You are given a Jupyter notebook (`AI_Irrigation_Optimizer_v4_larger_real_data.ipynb`) that trains a scikit-learn regression model to recommend irrigation amounts for a farm field. Your job is to turn this into a working, simple, locally-runnable **Flask web application** with a form-based frontend.
+You are given a Jupyter notebook (`docs/notebooks/AI_Irrigation_Optimizer_v4_larger_real_data.ipynb`) that trains a scikit-learn regression model to recommend irrigation amounts for a farm field. Your job is to turn this into a working, simple, locally-runnable **Flask web application** with a form-based frontend.
 
 ## What's in the notebook (source of truth)
 - A trained `Pipeline` (preprocessor + regressor) saved via `joblib` to `artifacts/irrigation_model.joblib`
@@ -17,7 +17,7 @@ Extract the model logic out of the notebook into a standalone Python module, the
 irrigation_app/
 ├── app.py
 ├── logic.py
-├── model/
+├── assets/model/
 │   └── irrigation_model.joblib      # copy from notebook's artifacts/ output
 ├── templates/
 │   └── index.html
@@ -30,7 +30,7 @@ irrigation_app/
 ### 2. `logic.py`
 - Port over: `KC_TABLE`, `ROOT_ZONE_DEPTH_MM`, `CROP_SYNONYMS`, `SOIL_SYNONYMS`, `DEFAULT_KC`, `DEFAULT_ROOT_DEPTH`
 - Port over: `normalize_crop()`, `normalize_soil()`, `estimate_et0()`, `get_confidence()`, `recommend_irrigation()`
-- Load the trained pipeline once at import time: `pipeline = joblib.load("model/irrigation_model.joblib")`
+- Load the trained pipeline once at import time: `pipeline = joblib.load("assets/model/irrigation_model.joblib")`
 - Keep `feature_cols_num` / `feature_cols_cat` exactly as defined in the notebook — the model was trained on that exact column order/schema.
 
 ### 3. `app.py` (Flask)
@@ -63,17 +63,17 @@ joblib
 (Pin versions to match whatever scikit-learn version the notebook used, to avoid joblib load errors from version mismatches — check the notebook's pip environment if version info is available, otherwise use recent stable versions and note this as a known risk.)
 
 ### 6. `README.md`
-Include: how to install (`pip install -r requirements.txt`), how to run (`flask --app app run` or `python app.py`), and a note that `model/irrigation_model.joblib` must be copied in manually from the notebook's `artifacts/` folder output before running.
+Include: how to install (`pip install -r requirements.txt`), how to run (`flask --app src.app run` or `python src/app.py`), and a note that `assets/model/irrigation_model.joblib` must be copied in manually from the notebook's `artifacts/` folder output before running.
 
 ## Important constraints
 - Do NOT retrain the model — just load the existing `.joblib` file.
 - Do NOT change the feature schema/column order — it must exactly match what the notebook's `ColumnTransformer` was fit on, or predictions will silently break.
 - Keep it simple: no database, no user auth, no React — single Flask app, server-rendered HTML, runs locally with `flask run`.
-- If `model/irrigation_model.joblib` is missing at startup, fail with a clear error message telling the user to export it from the notebook first, rather than crashing with a raw traceback.
+- If `assets/model/irrigation_model.joblib` is missing at startup, fail with a clear error message telling the user to export it from the notebook first, rather than crashing with a raw traceback.
 - Test the app by running it and submitting the notebook's own demo values (Section 9 of the notebook) — confirm the output matches what the notebook prints.
 
 ## Deliverable
-A working Flask app in the structure above, runnable with `pip install -r requirements.txt && flask --app app run`, that reproduces `recommend_irrigation()`'s output through a web form.
+A working Flask app in the structure above, runnable with `pip install -r requirements.txt && flask --app src.app run`, that reproduces `recommend_irrigation()`'s output through a web form.
 
 ---
 

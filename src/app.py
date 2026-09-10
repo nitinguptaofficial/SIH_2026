@@ -6,7 +6,11 @@ POST /predict  → reads form, calls recommend_irrigation(), shows result
 """
 
 from flask import Flask, render_template, request, jsonify
-import logic
+
+try:
+    from . import logic
+except ImportError:
+    import logic
 
 app = Flask(__name__)
 

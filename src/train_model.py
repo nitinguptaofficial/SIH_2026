@@ -56,6 +56,10 @@ except ImportError:
 warnings.filterwarnings("ignore")
 np.random.seed(42)
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(PROJECT_ROOT, 'assets', 'data')
+MODEL_DIR = os.path.join(PROJECT_ROOT, 'assets', 'model')
+
 # ── Reference tables (identical to notebook) ──────────────────────────────────
 KC_TABLE = {
     'Rice':      {'Initial': 1.05, 'Development': 1.10, 'Mid-season': 1.20, 'Late-season': 0.90},
@@ -103,7 +107,7 @@ def synth_target(temp, humidity, rainfall, soil_moist, field_cap, crop, stage):
 # ── Real data loaders (mirror notebook Section 3) ─────────────────────────────
 def load_crop_recommendation():
     """Kaggle: atharvaingle/crop-recommendation-dataset"""
-    path = os.path.join('data', 'Crop_recommendation.csv')
+    path = os.path.join(DATA_DIR, 'Crop_recommendation.csv')
     if not os.path.exists(path):
         return None
     df = pd.read_csv(path)
@@ -117,8 +121,8 @@ def load_crop_recommendation():
 
 def load_mendeley_motor():
     """Mendeley soil/motor sensor logs — actual columns: Soil Moisture, Temperature, Air Humidity"""
-    matches = (glob.glob(os.path.join('data', 'mendeley_soil_motor*.csv')) or
-               glob.glob(os.path.join('data', '*motor*.csv')))
+    matches = (glob.glob(os.path.join(DATA_DIR, 'mendeley_soil_motor*.csv')) or
+               glob.glob(os.path.join(DATA_DIR, '*motor*.csv')))
     if not matches:
         return None
     df = pd.read_csv(matches[0])
@@ -146,7 +150,7 @@ def load_mendeley_motor():
 
 def load_zindi_wazihub():
     """Zindi WaziHub — actual columns: Soil humidity 1..4, Air temperature (C), Air humidity (%), Wind speed (Km/h)"""
-    path = os.path.join('data', 'zindi_train.csv')
+    path = os.path.join(DATA_DIR, 'zindi_train.csv')
     if not os.path.exists(path):
         return None
     df = pd.read_csv(path)
@@ -292,8 +296,8 @@ best_pipe  = pipelines[best_name]
 print(f"\nBest model: {best_name}")
 
 # ── Save ──────────────────────────────────────────────────────────────────────
-os.makedirs('model', exist_ok=True)
-out_path = os.path.join('model', 'irrigation_model.joblib')
+os.makedirs(MODEL_DIR, exist_ok=True)
+out_path = os.path.join(MODEL_DIR, 'irrigation_model.joblib')
 joblib.dump(best_pipe, out_path)
 print(f"Saved -> {out_path}")
 

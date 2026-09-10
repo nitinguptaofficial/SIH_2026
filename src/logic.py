@@ -156,7 +156,8 @@ def recommend_irrigation(
 # 4.  Load trained pipeline at import time
 # ---------------------------------------------------------------------------
 
-_MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "irrigation_model.joblib")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+_MODEL_PATH = os.path.join(_PROJECT_ROOT, "assets", "model", "irrigation_model.joblib")
 
 
 def _load_pipeline():
@@ -166,7 +167,7 @@ def _load_pipeline():
             "Please run the Jupyter notebook "
             "(AI_Irrigation_Optimizer_v4_larger_real_data.ipynb) to train and save "
             "the model, then copy 'artifacts/irrigation_model.joblib' to "
-            "'irrigation_app/model/irrigation_model.joblib' before starting the app.\n"
+            "'assets/model/irrigation_model.joblib' before starting the app.\n"
         )
     return joblib.load(_MODEL_PATH)
 

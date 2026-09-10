@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: ai-irrigation-optimizer
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --chdir src app:app
+    healthCheckPath: /
